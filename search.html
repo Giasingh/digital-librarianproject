@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Search</title>
+  <script src="https://unpkg.com/flexsearch/dist/flexsearch.bundle.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+    }
+    input {
+      width: 80%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .result {
+      margin-bottom: 1.5rem;
+    }
+    .result h3 {
+      margin: 0 0 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>PDF Search</h1>
+  <input id="search" type="text" placeholder="Search PDF content..." />
+  <div id="results"></div>
+
+  <script>
+    const index = new FlexSearch.Document({
+      document: {
+        id: "id",
+        index: ["filename", "content"]
+      }
+    });
+
+    let documents = [];
+
+    fetch("pdf_index.json")
+      .then(res => res.json())
+      .then(data => {
+        documents = data.map((doc, i) => ({ id: i, ...doc }));
+        documents.forEach(doc => index.add(doc));
+      });
+
+    document.getElementById("search").addEventListener("input", async e => {
+      const query = e.target.value;
+      const results = await index.searchAsync(query, { enrich: true });
+
+      const flat = results.flatMap(group => group.result);
+      const container = document.getElementById("results");
+
+      container.innerHTML = flat.map(result => {
+        const doc = documents.find(d => d.id === result);
+        return `
+          <div class="result">
+            <h3>${doc.filename}</h3>
+            <p>${doc.content.slice(0, 300)}...</p>
+          </div>
+        `;
+      }).join("") || "<p>No results found.</p>";
+    });
+  </script>
+</body>
+</html>
